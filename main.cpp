@@ -1,5 +1,5 @@
 #include "mbed.h"
-
+#include "arm_book_lib.h"
 
 int main()
 {
@@ -7,6 +7,16 @@ int main()
     DigitalOut LD2(LED2);
     
     while (true){
-        LD2 = B1_USER;
+        int i;
+        if(B1_USER)
+        {
+            for(i=0;i<5;i++)
+            {
+                LD2 = ON;
+                delay(300);
+                LD2 = OFF;
+                delay(300);
+            }
+        }
     }
 }
