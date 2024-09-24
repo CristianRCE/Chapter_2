@@ -3,17 +3,25 @@
 #include "arm_book_lib.h"
 
 //=====[Declaration of pins]============================================
-DigitalIn B1_USER(BUTTON1);
-DigitalOut LD2(LED2);
+DigitalIn gasDetector(D2);
+DigitalIn overTempDetector(D3);
+DigitalIn alarmOffButton(D4);
+DigitalOut alarmLed(LED1);
+
+//=====[Serial Terminal]==============================
+UnbufferedSerial serial_port(USBTX,USBRX);
 
 //=====[Declaration and Initialization of global variables]============================================
-int i = 0;
+bool alarmState = OFF;
 
 //=====[Declaration (prototypes) of publics functions]==================
+
 void inputsInit();
 void outputsInit();
 
-void blinkingLed();
+void gasTempDetection();
+void uartTask();
+void uartInit();
 
 //=====[Main Function]==================
 
@@ -21,33 +29,66 @@ int main()
 {
     inputsInit();
     outputsInit();
+    uartInit();
 
     while (true){
-        blinkingLed();
+        gasTempDetection();
+        uartTask();
     }
 }
 
 void inputsInit()
 {
-    B1_USER.mode(PullDown);
+    gasDetector.mode(PullDown);
+    overTempDetector.mode(PullDown);
+    alarmOffButton.mode(PullDown);
 }
 
 void outputsInit()
 {
-    LD2=OFF;
+    alarmLed=OFF;
 }
 
-
-void blinkingLed()
+void gasTempDetection()
 {
-    if(B1_USER)
+    if(overTempDetector || gasDetector)
+    {
+        alarmState = ON;
+    }
+    if(alarmOffButton)
+    {
+        alarmState = OFF;
+    }
+    alarmLed = alarmState;
+}
+
+void uartInit()
+{
+    //PROPERTIES:
+    serial_port.baud(9600);
+    serial_port.format(
+        /*bits*/ 8,
+        /*parity*/ SerialBase::None,
+        /*stop bit*/ 1
+    );
+}
+
+void uartTask()
+{
+    char receivedChar = '\0';
+    if(uartUsb.readable())
+    {
+        uartUsb.read( &receivedChar,1);
+        if(receivedChar == '1')
         {
-            for(i=0;i<5;i++)
+            if(alarmState)
             {
-                LD2 = ON;
-                delay(300);
-                LD2 = OFF;
-                delay(300);
+                uartUsb.write("The alarm is activated\r\n",24);
+            }
+            else
+            {
+                uartUsb.write("The alarm is not activated\r\n",28);
             }
         }
+    }
 }
